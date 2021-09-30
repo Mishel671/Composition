@@ -4,7 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.*
 import com.example.composition.R
 import com.example.composition.databinding.FragmentGameBinding
 import com.example.composition.domain.entity.GameResult
@@ -14,6 +17,12 @@ import com.example.composition.domain.entity.Level
 class GameFragment : Fragment() {
 
     private lateinit var level: Level
+    private val viewModel:GameViewModel by lazy {
+        ViewModelProvider(
+            this,
+            AndroidViewModelFactory.getInstance(requireActivity().application)
+        ).get(GameViewModel::class.java)
+    }
 
     private var _binding: FragmentGameBinding? = null
     private val binding: FragmentGameBinding
@@ -35,14 +44,29 @@ class GameFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setButtonListeners()
+        viewModel.startGame(level)
+        setValues()
     }
 
-    private fun setButtonListeners() {
-        val gameSettings = GameSettings(10, 3, 50, 8)
-        val gameResult = GameResult(true, 10, 15,gameSettings)
-        binding.tvOption1.setOnClickListener {
-            launchGameFinishedFragment(gameResult)
+    private fun setValues(){
+        viewModel.question.observe(viewLifecycleOwner){
+            binding.tvSum.text = it.sum.toString()
+            binding.tvLeftNumber.text = it.visibleNumber.toString()
+            binding.tvOption2.text = it.rightAnswer.toString()
+        }
+        viewModel.formattedTime.observe(viewLifecycleOwner){
+            binding.tvTimer.text = it
+        }
+        viewModel.progressAnswers.observe(viewLifecycleOwner){
+            binding.tvAnswersProgress.text = it
+        }
+        viewModel.minPercent.observe(viewLifecycleOwner){
+            binding.progressBar.setProgress(it)
+        }
+
+        binding.tvOption2.setOnClickListener {
+            val key = binding.tvOption2.text.toString().toInt()
+            viewModel.chooseAnswer(key)
         }
     }
 
@@ -55,8 +79,9 @@ class GameFragment : Fragment() {
 
 
     private fun parseArgs(){
-        level = requireArguments().getSerializable(KEY_LEVEL) as Level
-
+        requireArguments().getParcelable<Level>(KEY_LEVEL)?.let {
+            level = it
+        }
     }
 
     override fun onDestroyView() {
@@ -72,7 +97,7 @@ class GameFragment : Fragment() {
         fun newIntent(level: Level):GameFragment{
             return GameFragment().apply {
                 arguments = Bundle().apply {
-                    putSerializable(KEY_LEVEL, level)
+                    putParcelable(KEY_LEVEL, level)
                 }
             }
         }
