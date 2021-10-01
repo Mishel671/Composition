@@ -35,9 +35,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val question: LiveData<Question>
         get() = _question
 
-    private val _percent = MutableLiveData<Int>()
-    val percent: LiveData<Int>
-        get() = _percent
+    private val _percentOfRightAnswer = MutableLiveData<Int>()
+    val percentOfRightAnswers: LiveData<Int>
+        get() = _percentOfRightAnswer
 
     private val _progressAnswers = MutableLiveData<String>()
     val progressAnswers: LiveData<String>
@@ -54,10 +54,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _minPercent = MutableLiveData<Int>()
     val minPercent: LiveData<Int>
         get() = _minPercent
-
-    private val _secondaryProgress = MutableLiveData<Int>()
-    val secondaryProgress: LiveData<Int>
-        get() = _secondaryProgress
 
     private val _gameResult = MutableLiveData<GameResult>()
     val gameResult: LiveData<GameResult>
@@ -81,7 +77,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun updateProgress() {
         val percent = calculateProgressOfRightAnswers()
-        _percent.value = percent
+        _percentOfRightAnswer.value = percent
         _progressAnswers.value = String.format(
             context.resources.getString(R.string.progress_answers),
             countOfRightAnswers,
@@ -92,9 +88,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun calculateProgressOfRightAnswers(): Int{
+        if (countOfRightAnswers == 0){
+            return 0
+        }
         return ((countOfRightAnswers / countOfQuestions.toDouble()) * 100).toInt()
     }
-
     private fun checkAnswer(number: Int) {
         val rightAnswer = question.value?.rightAnswer
         if (number == rightAnswer) {
