@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.composition.R
 import com.example.composition.databinding.FragmentGameFinishedBinding
@@ -16,12 +15,6 @@ import com.example.composition.domain.entity.GameResult
 class GameFinishedFragment : Fragment() {
 
     private lateinit var gameResult: GameResult
-    private val viewModel by lazy{
-        ViewModelProvider(
-            this,
-            ViewModelProvider.AndroidViewModelFactory(requireActivity().application)
-        )[GameFinishedViewModel::class.java]
-    }
 
     private var _binding: FragmentGameFinishedBinding? = null
     private val binding: FragmentGameFinishedBinding
@@ -42,30 +35,50 @@ class GameFinishedFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        backPressedListener()
-        observeViewModel()
+        setupClickListener()
+        bindViews()
     }
 
-    private fun observeViewModel(){
-        viewModel.setValues(gameResult)
-        viewModel.image.observe(viewLifecycleOwner){
-            binding.emojiResult.setImageDrawable(it)
-        }
-        viewModel.minCountOfRightAnswers.observe(viewLifecycleOwner){
-            binding.tvRequiredAnswers.text = it
-        }
-        viewModel.countOfRightAnswers.observe(viewLifecycleOwner){
-            binding.tvScoreAnswers.text = it
-        }
-        viewModel.minPercentOfRightAnswers.observe(viewLifecycleOwner){
-            binding.tvRequiredPercentage.text = it
-        }
-        viewModel.percentOfRightAnswers.observe(viewLifecycleOwner){
-            binding.tvScorePercentage.text = it
+    private fun bindViews() {
+//        viewModel.setValues(gameResult)
+        with(binding) {
+            emojiResult.setImageResource(getSmileResId())
+            tvRequiredAnswers.text = String.format(
+                getString(R.string.required_score),
+                gameResult.gameSettings.minCountOfRightAnswer
+            )
+            tvScoreAnswers.text = String.format(
+                getString(R.string.score_answers),
+                gameResult.countOfRightAnswers
+            )
+            tvRequiredPercentage.text = String.format(
+                getString(R.string.required_percentage),
+                gameResult.gameSettings.minPercentOfRightAnswer
+            )
+            tvScorePercentage.text = String.format(
+                getString(R.string.score_percentage),
+                getPercentOfRightAnswers()
+            )
         }
     }
 
-    private fun backPressedListener() {
+    private fun getPercentOfRightAnswers() = with(gameResult){
+        if(countOfQuestions == 0) {
+            0
+        } else {
+            ((countOfRightAnswers / countOfQuestions.toDouble()) * 100).toInt()
+        }
+    }
+
+    private fun getSmileResId(): Int {
+        return if (gameResult.winner) {
+            R.drawable.ic_smile
+        } else {
+            R.drawable.ic_sad
+        }
+    }
+
+    private fun setupClickListener() {
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 retryGame()
@@ -77,7 +90,7 @@ class GameFinishedFragment : Fragment() {
         }
     }
 
-    private fun retryGame(){
+    private fun retryGame() {
         requireActivity().supportFragmentManager.popBackStack(
             GameFragment.NAME,
             FragmentManager.POP_BACK_STACK_INCLUSIVE
@@ -85,7 +98,7 @@ class GameFinishedFragment : Fragment() {
     }
 
 
-    private fun parseArgs(){
+    private fun parseArgs() {
         requireArguments().getParcelable<GameResult>(KEY_RESULT)?.let {
             gameResult = it
         }
@@ -95,7 +108,6 @@ class GameFinishedFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-
 
 
     companion object {
