@@ -7,13 +7,21 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.example.composition.R
 import com.example.composition.databinding.FragmentGameFinishedBinding
 import com.example.composition.domain.entity.GameResult
 
 class GameFinishedFragment : Fragment() {
 
-    private lateinit var gameResults: GameResult
+    private lateinit var gameResult: GameResult
+    private val viewModel by lazy{
+        ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory(requireActivity().application)
+        )[GameFinishedViewModel::class.java]
+    }
 
     private var _binding: FragmentGameFinishedBinding? = null
     private val binding: FragmentGameFinishedBinding
@@ -34,24 +42,53 @@ class GameFinishedFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.buttonRetry.setOnClickListener{
-            retryGame()
+        backPressedListener()
+        observeViewModel()
+    }
+
+    private fun observeViewModel(){
+        viewModel.setValues(gameResult)
+        viewModel.image.observe(viewLifecycleOwner){
+            binding.emojiResult.setImageDrawable(it)
         }
-        val callback = object : OnBackPressedCallback(true){
+        viewModel.minCountOfRightAnswers.observe(viewLifecycleOwner){
+            binding.tvRequiredAnswers.text = it
+        }
+        viewModel.countOfRightAnswers.observe(viewLifecycleOwner){
+            binding.tvScoreAnswers.text = it
+        }
+        viewModel.minPercentOfRightAnswers.observe(viewLifecycleOwner){
+            binding.tvRequiredPercentage.text = it
+        }
+        viewModel.percentOfRightAnswers.observe(viewLifecycleOwner){
+            binding.tvScorePercentage.text = it
+        }
+    }
+
+    private fun backPressedListener() {
+        val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 retryGame()
             }
         }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner,callback)
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
+        binding.buttonRetry.setOnClickListener {
+            retryGame()
+        }
     }
 
     private fun retryGame(){
-        requireActivity().supportFragmentManager.popBackStack(GameFragment.NAME, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        requireActivity().supportFragmentManager.popBackStack(
+            GameFragment.NAME,
+            FragmentManager.POP_BACK_STACK_INCLUSIVE
+        )
     }
 
 
     private fun parseArgs(){
-        gameResults = requireArguments().getSerializable(KEY_RESULT) as GameResult
+        requireArguments().getParcelable<GameResult>(KEY_RESULT)?.let {
+            gameResult = it
+        }
     }
 
     override fun onDestroyView() {
@@ -63,12 +100,12 @@ class GameFinishedFragment : Fragment() {
 
     companion object {
 
-        private const val KEY_RESULT = "result"
+        private const val KEY_RESULT = "game_result"
 
-        fun newIntent(gameResult: GameResult): GameFinishedFragment {
+        fun newInstance(gameResult: GameResult): GameFinishedFragment {
             return GameFinishedFragment().apply {
                 arguments = Bundle().apply {
-                    putSerializable(KEY_RESULT, gameResult)
+                    putParcelable(KEY_RESULT, gameResult)
                 }
             }
         }
